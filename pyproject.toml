@@ -1,0 +1,40 @@
+[build-system]
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
+
+[project]
+name = "xhamster_api"
+version = "2.3"
+description = "A Python API for the Porn Site xhamster.com"
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.12"
+license = "LGPL-3.0-only"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Johannes Habel", email = "EchterAlsFake@proton.me" }
+]
+dependencies = [
+    "selectolax",
+    "chompjs",
+    "eaf-base-api",
+    "m3u8",
+]
+
+
+classifiers = [
+    "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)",
+    "Programming Language :: Python",
+]
+
+[project.optional-dependencies]
+av = ["av; python_version >= '3.10'"]
+
+[project.urls]
+Homepage = "https://github.com/EchterAlsFake/xhamster_api"
+
+[tool.setuptools]
+packages = { find = {} }
+
+[tool.uv.build-backend]
+module-name = "xhamster_api"
+module-root = ""
