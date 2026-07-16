@@ -3,26 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Search & Download</title>
+    <title>Rakib's Advanced Video Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
-<body class="bg-gray-900 text-white p-5">
+<body class="bg-black text-white p-4">
     <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold text-center mb-8 text-blue-500">Rakib's Video Engine</h1>
-        <div class="flex gap-2 mb-10">
-            <input type="text" id="q" placeholder="ভিডিওর নাম লিখুন..." class="w-full p-3 rounded bg-gray-800 border border-gray-700">
-            <button onclick="search()" class="bg-blue-600 px-6 py-3 rounded font-bold">Search</button>
+        <h1 class="text-3xl font-extrabold text-center mb-6 text-yellow-500">Video Pro Search</h1>
+        <p class="text-center text-xs text-gray-400 mb-6">নাম অথবা সরাসরি লিঙ্ক দিয়ে সার্চ করুন</p>
+        
+        <div class="flex gap-2 mb-8">
+            <input type="text" id="q" placeholder="Paste link or type name..." class="w-full p-3 rounded-lg bg-gray-900 border border-yellow-600 focus:outline-none">
+            <button onclick="search()" class="bg-yellow-600 px-6 py-3 rounded-lg font-bold">Search</button>
         </div>
+        
+        <div id="loader" class="hidden text-center text-yellow-500 mb-4">অপেক্ষা করুন...</div>
         <div id="results" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
     </div>
 
-    <!-- Player Modal -->
-    <div id="player" class="fixed inset-0 bg-black hidden flex flex-col items-center justify-center p-4">
+    <!-- Modal for Play -->
+    <div id="player" class="fixed inset-0 bg-black hidden flex flex-col items-center justify-center p-4 z-50">
         <button onclick="closePlayer()" class="absolute top-5 right-5 bg-red-600 px-4 py-2 rounded">Close</button>
-        <video id="v" controls class="w-full max-w-2xl rounded shadow-lg"></video>
-        <div class="mt-4 flex gap-4">
-             <a id="dl_btn" href="#" target="_blank" class="bg-green-600 px-6 py-2 rounded font-bold">Download MP4/Link</a>
+        <video id="v" controls class="w-full max-w-2xl rounded"></video>
+        <div class="mt-6">
+            <button id="copyBtn" class="bg-green-600 px-8 py-3 rounded-full font-bold text-white">Copy Download Link</button>
         </div>
     </div>
 
@@ -30,20 +34,28 @@
         async function search() {
             const q = document.getElementById('q').value;
             const resDiv = document.getElementById('results');
-            resDiv.innerHTML = "<p class='text-center col-span-full'>খোঁজা হচ্ছে... অপেক্ষা করুন</p>";
+            const loader = document.getElementById('loader');
             
-            const response = await fetch('/search?q=' + q);
-            const data = await response.json();
             resDiv.innerHTML = "";
+            loader.classList.remove('hidden');
+
+            const response = await fetch('/search?q=' + encodeURIComponent(q));
+            const data = await response.json();
+            loader.classList.add('hidden');
+
+            if (data.length === 0) {
+                resDiv.innerHTML = "<p class='text-center col-span-full'>কিছু পাওয়া যায়নি!</p>";
+                return;
+            }
 
             data.forEach(v => {
                 resDiv.innerHTML += `
-                    <div class="bg-gray-800 p-4 rounded shadow-md">
-                        <img src="${v.thumbnail}" class="w-full h-44 object-cover rounded cursor-pointer" onclick="play('${v.m3u8}')">
-                        <h3 class="mt-3 text-sm font-semibold h-10 overflow-hidden">${v.title}</h3>
-                        <div class="flex justify-between mt-4">
-                            <button onclick="play('${v.m3u8}')" class="text-blue-400 text-sm font-bold">Play</button>
-                            <button onclick="download('${v.m3u8}', '${v.title}')" class="text-green-400 text-sm font-bold">Download</button>
+                    <div class="bg-gray-900 p-3 rounded-lg border border-gray-800">
+                        <img src="${v.thumbnail}" class="w-full h-40 object-cover rounded mb-3">
+                        <h3 class="text-sm font-semibold truncate">${v.title}</h3>
+                        <div class="flex gap-3 mt-4">
+                            <button onclick="play('${v.m3u8}')" class="bg-blue-600 flex-1 py-2 rounded text-xs font-bold">PLAY</button>
+                            <button onclick="copyLink('${v.m3u8}')" class="bg-green-600 flex-1 py-2 rounded text-xs font-bold text-black">GET LINK</button>
                         </div>
                     </div>
                 `;
@@ -59,18 +71,17 @@
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
             }
-            document.getElementById('dl_btn').href = url;
+            document.getElementById('copyBtn').onclick = () => copyLink(url);
         }
 
-        function download(url, title) {
-            // m3u8 লিঙ্ক সরাসরি ডাউনলোড করা যায় না, তাই আমরা লিঙ্কটি দিয়ে দিচ্ছি
-            // ব্যবহারকারী চাইলে এটি কোনো ভিডিও ডাউনলোডার অ্যাপে (যেমন ADM বা 1DM) পেস্ট করতে পারেন
-            prompt("এই ভিডিওর m3u8 লিঙ্কটি কপি করুন এবং আপনার ফেভারিট ডাউনলোডার অ্যাপে পেস্ট করুন:", url);
+        function copyLink(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                alert("ডাউনলোড লিঙ্কটি কপি হয়েছে! এখন আপনার ডাউনলোডার অ্যাপে (যেমন 1DM) লিঙ্কটি পেস্ট করুন।");
+            });
         }
 
         function closePlayer() {
-            const video = document.getElementById('v');
-            video.pause();
+            document.getElementById('v').pause();
             document.getElementById('player').classList.add('hidden');
         }
     </script>
