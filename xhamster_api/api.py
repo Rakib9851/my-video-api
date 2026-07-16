@@ -9,7 +9,7 @@ import asyncio
 from dataclasses import dataclass
 from functools import cached_property
 from urllib.parse import urlencode, quote
-from curl_cffi import AsyncSession, Response
+from curl_cffi.requests import AsyncSession, Response
 from selectolax.lexbor import LexborHTMLParser
 
 # base_api ইমপোর্ট করার সময় এরর হ্যান্ডেল করা
