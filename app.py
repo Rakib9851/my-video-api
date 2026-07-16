@@ -1,36 +1,47 @@
 import os
 import asyncio
-from flask import Flask, render_template, request, jsonify
-from xhamster_api import Client
+import urllib.request
+from flask import Flask, render_template, request, jsonify, Response
+from xhamster_api.api import Client
 
 app = Flask(__name__)
 
-async def get_data_async(query):
+async def fetch_video_data(query):
     client = Client()
     results = []
     
-    # যদি ইনপুটটি সরাসরি একটি লিঙ্ক হয়
-    if "xhamster.com" in query:
+    # ১. যদি সরাসরি লিংক হয় (যেমন: https://xhamster.com/videos/...)
+    if "xhamster.com/videos/" in query or "xhamster.com/shorts/" in query:
         try:
-            video = await client.get_video(query)
+            if "/shorts/" in query:
+                video = await client.get_short(query)
+            else:
+                video = await client.get_video(query)
+                
             results.append({
                 "title": video.title,
-                "thumbnail": video.thumbnail,
+                "thumbnail": getattr(video, 'thumbnail', getattr(video, 'thumb_url', '')),
                 "m3u8": video.m3u8_base_url,
-                "uploader": video.uploader_name
+                "url": query
             })
-        except:
-            pass
-    # যদি ইনপুটটি কোনো নাম হয় তবে সার্চ করবে
+        except Exception as e:
+            print(f"Error: {e}")
+            
+    # ২. যদি কোনো নাম লিখে সার্চ হয়
     else:
-        async for scrape_result in client.search_videos(query=query, pages=1):
-            video = scrape_result.video
-            results.append({
-                "title": video.title,
-                "thumbnail": video.thumbnail,
-                "m3u8": video.m3u8_base_url,
-                "uploader": video.uploader_name
-            })
+        try:
+            async for scrape_result in client.search_videos(query=query, pages=1):
+                video = scrape_result.video
+                v_url = f"https://xhamster.com/videos/{video.video_id}"
+                results.append({
+                    "title": video.title,
+                    "thumbnail": video.thumbnail,
+                    "m3u8": video.m3u8_base_url,
+                    "url": v_url
+                })
+        except Exception as e:
+            print(f"Error: {e}")
+
     return results
 
 @app.route('/')
@@ -40,15 +51,36 @@ def home():
 @app.route('/search')
 def search():
     query = request.args.get('q')
-    if not query: return jsonify([])
+    if not query:
+        return jsonify([])
     
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    data = loop.run_until_complete(fetch_video_data(query))
+    return jsonify(data)
+
+# ডাউনলোডের ম্যাজিক রুট!
+@app.route('/download_file')
+def download_file():
+    m3u8_url = request.args.get('url')
+    title = request.args.get('title', 'video').replace(" ", "_")
+    
+    if not m3u8_url:
+        return "No URL provided", 400
+        
     try:
-        data = loop.run_until_complete(get_data_async(query))
-        return jsonify(data)
-    finally:
-        loop.close()
+        req = urllib.request.Request(m3u8_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            m3u8_content = response.read()
+            
+        # এটি ব্রাউজারকে ফাইলটি ডাউনলোড করতে বাধ্য করবে
+        return Response(
+            m3u8_content,
+            mimetype="application/vnd.apple.mpegurl",
+            headers={"Content-disposition": f"attachment; filename={title}.m3u8"}
+        )
+    except Exception as e:
+        return str(e), 500
 
 if __name__ == '__main__':
     app.run()
