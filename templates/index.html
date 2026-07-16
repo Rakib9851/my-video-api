@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Search Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body class="bg-gray-900 text-white p-5">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8">Video Search</h1>
+        <div class="flex gap-2 mb-10">
+            <input type="text" id="q" placeholder="Search videos..." class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+            <button onclick="search()" class="bg-blue-600 px-6 py-3 rounded font-bold">Search</button>
+        </div>
+        <div id="results" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    </div>
+
+    <!-- Video Player Modal -->
+    <div id="player" class="fixed inset-0 bg-black hidden flex flex-col items-center justify-center">
+        <button onclick="document.getElementById('player').classList.add('hidden')" class="mb-4 bg-red-600 px-4 py-2 rounded">Close</button>
+        <video id="v" controls class="w-full max-w-2xl"></video>
+    </div>
+
+    <script>
+        async function search() {
+            const q = document.getElementById('q').value;
+            const resDiv = document.getElementById('results');
+            resDiv.innerHTML = "Searching...";
+            
+            const response = await fetch('/search?q=' + q);
+            const data = await response.json();
+            resDiv.innerHTML = "";
+
+            data.forEach(v => {
+                resDiv.innerHTML += `
+                    <div class="bg-gray-800 p-4 rounded cursor-pointer" onclick="play('${v.m3u8}')">
+                        <img src="${v.thumbnail}" class="w-full h-40 object-cover rounded">
+                        <h3 class="mt-2 text-sm">${v.title}</h3>
+                    </div>
+                `;
+            });
+        }
+
+        function play(url) {
+            const video = document.getElementById('v');
+            document.getElementById('player').classList.remove('hidden');
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+            }
+        }
+    </script>
+</body>
+</html>
