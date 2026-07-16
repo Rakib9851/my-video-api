@@ -1,0 +1,7 @@
+flask
+gunicorn
+curl_cffi
+selectolax
+chompjs
+m3u8
+eaf-base-api
