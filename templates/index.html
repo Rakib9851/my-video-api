@@ -3,31 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Search Engine</title>
+    <title>Video Search & Download</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body class="bg-gray-900 text-white p-5">
     <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold text-center mb-8">Video Search</h1>
+        <h1 class="text-3xl font-bold text-center mb-8 text-blue-500">Rakib's Video Engine</h1>
         <div class="flex gap-2 mb-10">
-            <input type="text" id="q" placeholder="Search videos..." class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+            <input type="text" id="q" placeholder="ভিডিওর নাম লিখুন..." class="w-full p-3 rounded bg-gray-800 border border-gray-700">
             <button onclick="search()" class="bg-blue-600 px-6 py-3 rounded font-bold">Search</button>
         </div>
-        <div id="results" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        <div id="results" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
     </div>
 
-    <!-- Video Player Modal -->
-    <div id="player" class="fixed inset-0 bg-black hidden flex flex-col items-center justify-center">
-        <button onclick="document.getElementById('player').classList.add('hidden')" class="mb-4 bg-red-600 px-4 py-2 rounded">Close</button>
-        <video id="v" controls class="w-full max-w-2xl"></video>
+    <!-- Player Modal -->
+    <div id="player" class="fixed inset-0 bg-black hidden flex flex-col items-center justify-center p-4">
+        <button onclick="closePlayer()" class="absolute top-5 right-5 bg-red-600 px-4 py-2 rounded">Close</button>
+        <video id="v" controls class="w-full max-w-2xl rounded shadow-lg"></video>
+        <div class="mt-4 flex gap-4">
+             <a id="dl_btn" href="#" target="_blank" class="bg-green-600 px-6 py-2 rounded font-bold">Download MP4/Link</a>
+        </div>
     </div>
 
     <script>
         async function search() {
             const q = document.getElementById('q').value;
             const resDiv = document.getElementById('results');
-            resDiv.innerHTML = "Searching...";
+            resDiv.innerHTML = "<p class='text-center col-span-full'>খোঁজা হচ্ছে... অপেক্ষা করুন</p>";
             
             const response = await fetch('/search?q=' + q);
             const data = await response.json();
@@ -35,9 +38,13 @@
 
             data.forEach(v => {
                 resDiv.innerHTML += `
-                    <div class="bg-gray-800 p-4 rounded cursor-pointer" onclick="play('${v.m3u8}')">
-                        <img src="${v.thumbnail}" class="w-full h-40 object-cover rounded">
-                        <h3 class="mt-2 text-sm">${v.title}</h3>
+                    <div class="bg-gray-800 p-4 rounded shadow-md">
+                        <img src="${v.thumbnail}" class="w-full h-44 object-cover rounded cursor-pointer" onclick="play('${v.m3u8}')">
+                        <h3 class="mt-3 text-sm font-semibold h-10 overflow-hidden">${v.title}</h3>
+                        <div class="flex justify-between mt-4">
+                            <button onclick="play('${v.m3u8}')" class="text-blue-400 text-sm font-bold">Play</button>
+                            <button onclick="download('${v.m3u8}', '${v.title}')" class="text-green-400 text-sm font-bold">Download</button>
+                        </div>
                     </div>
                 `;
             });
@@ -52,6 +59,19 @@
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
             }
+            document.getElementById('dl_btn').href = url;
+        }
+
+        function download(url, title) {
+            // m3u8 লিঙ্ক সরাসরি ডাউনলোড করা যায় না, তাই আমরা লিঙ্কটি দিয়ে দিচ্ছি
+            // ব্যবহারকারী চাইলে এটি কোনো ভিডিও ডাউনলোডার অ্যাপে (যেমন ADM বা 1DM) পেস্ট করতে পারেন
+            prompt("এই ভিডিওর m3u8 লিঙ্কটি কপি করুন এবং আপনার ফেভারিট ডাউনলোডার অ্যাপে পেস্ট করুন:", url);
+        }
+
+        function closePlayer() {
+            const video = document.getElementById('v');
+            video.pause();
+            document.getElementById('player').classList.add('hidden');
         }
     </script>
 </body>
